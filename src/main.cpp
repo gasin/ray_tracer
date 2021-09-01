@@ -7,6 +7,8 @@
 #include "sphere.hpp"
 
 #include <iostream>
+#include <fstream>
+#include <string>
 
 color ray_color(const ray& r, const hittable& world, int depth) {
     hit_record rec;
@@ -33,9 +35,9 @@ color ray_color(const ray& r, const hittable& world, int depth) {
 hittable_list random_scene() {
     hittable_list world;
 
-    // auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
-    auto ground_material = make_shared<dielectric>(1.5);
-    world.add(make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));
+    auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));
+    // auto ground_material = make_shared<dielectric>(1.5);
+    world.add(make_shared<sphere>(point3(0,-1000,0), 1000, ground_material, true));
 
     for (int a = -11; a < 11; a++) {
         for (int b = -11; b < 11; b++) {
@@ -81,10 +83,10 @@ int main() {
 
     // Image
     const double aspect_ratio = 3.0 / 2.0;
-    const int image_width = 1200;
+    const int image_width = 300;
     const int image_height = static_cast<int>(image_width / aspect_ratio);
-    const int samples_per_pixel = 10;
-    const int max_depth = 10;
+    const int samples_per_pixel = 30;
+    const int max_depth = 50;
 
     // World
     auto world = random_scene();
@@ -121,20 +123,24 @@ int main() {
     auto aperture = 0.1;
     camera cam(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);
 
-    // Render
-    std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
+    for (int tick = 0; tick < 10; tick++) {
+        std::ofstream output_file(std::to_string(tick) + ".ppm");
+        // Render
+        output_file << "P3\n" << image_width << " " << image_height << "\n255\n";
 
-    for (int j = image_height-1; j >= 0; --j) {
-        std::cerr << "\rScanlines remaining: " << j << " " << std::flush;
-        for (int i = 0; i < image_width; i++) {
-            color pixel_color(0, 0, 0);
-            for (int s = 0; s < samples_per_pixel; ++s) {
-                auto u = (i + random_double()) / (image_width-1);
-                auto v = (j + random_double()) / (image_height-1);
-                ray r = cam.get_ray(u, v);
-                pixel_color += ray_color(r, world, max_depth);
+        for (int j = image_height-1; j >= 0; --j) {
+            std::cerr << "\rScanlines remaining: " << j << " " << std::flush;
+            for (int i = 0; i < image_width; i++) {
+                color pixel_color(0, 0, 0);
+                for (int s = 0; s < samples_per_pixel; ++s) {
+                    auto u = (i + random_double()) / (image_width-1);
+                    auto v = (j + random_double()) / (image_height-1);
+                    ray r = cam.get_ray(u, v);
+                    pixel_color += ray_color(r, world, max_depth);
+                }
+                write_color(output_file, pixel_color, samples_per_pixel);
             }
-            write_color(std::cout, pixel_color, samples_per_pixel);
         }
+        world.shift_center();
     }
 }

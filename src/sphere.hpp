@@ -8,13 +8,17 @@ class sphere : public hittable {
 public:
     sphere() {}
     sphere(point3 cen, double r, shared_ptr<material> m)
-        : center(cen), radius(r), mat_ptr(m) {}
+        : center(cen), radius(r), mat_ptr(m), fixed(false) {}
+    sphere(point3 cen, double r, shared_ptr<material> m, bool fix)
+        : center(cen), radius(r), mat_ptr(m), fixed(fix) {}
 
     virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
+    virtual void shift_center() override;
 
     point3 center;
     double radius;
     shared_ptr<material> mat_ptr;
+    bool fixed;
 };
 
 bool sphere::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
@@ -44,6 +48,13 @@ bool sphere::hit(const ray& r, double t_min, double t_max, hit_record& rec) cons
     rec.mat_ptr = mat_ptr;
 
     return true;
+}
+
+void sphere::shift_center() {
+    if (fixed) {
+        return;
+    }
+    center += point3(random_double(-0.2, 0.2), 0.0, random_double(-0.2, 0.2));
 }
 
 #endif
