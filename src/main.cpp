@@ -124,7 +124,7 @@ int main() {
     camera cam(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);
 
     for (int tick = 0; tick < 10; tick++) {
-        std::ofstream output_file(std::to_string(tick) + ".ppm");
+        std::ofstream output_file("images/" + std::to_string(tick) + ".ppm");
         // Render
         output_file << "P3\n" << image_width << " " << image_height << "\n255\n";
 

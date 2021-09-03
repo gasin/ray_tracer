@@ -54,7 +54,7 @@ void sphere::shift_center() {
     if (fixed) {
         return;
     }
-    center += point3(random_double(-0.2, 0.2), 0.0, random_double(-0.2, 0.2));
+    center += point3(random_double(-0.2, 0.2), -0.1, random_double(-0.2, 0.2));
 }
 
 #endif
