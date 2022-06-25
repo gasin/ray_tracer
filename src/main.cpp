@@ -5,10 +5,12 @@
 #include "hittable_list.hpp"
 #include "material.hpp"
 #include "sphere.hpp"
+#include "moving_sphere.hpp"
 
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <omp.h>
 
 color ray_color(const ray& r, const hittable& world, int depth) {
     hit_record rec;
@@ -52,6 +54,10 @@ hittable_list random_scene() {
                     auto albedo = color::random() * color::random();
                     sphere_material = make_shared<lambertian>(albedo);
                     world.add(make_shared<sphere>(center, 0.2, sphere_material));
+                    /*
+                    auto center2 = center + vec3(0, random_double(0,0.5), 0);
+                    world.add(make_shared<moving_sphere>(center, center2, 0.0, 1.0, 0.2, sphere_material));
+                    */
                 } else if (choose_mat < 0.95) {
                     // metal
                     auto albedo = color::random(0.5, 1);
@@ -82,10 +88,10 @@ hittable_list random_scene() {
 int main() {
 
     // Image
-    const double aspect_ratio = 3.0 / 2.0;
-    const int image_width = 300;
+    const double aspect_ratio = 16.0 / 9.0;
+    const int image_width = 400;
     const int image_height = static_cast<int>(image_width / aspect_ratio);
-    const int samples_per_pixel = 30;
+    const int samples_per_pixel = 100;
     const int max_depth = 50;
 
     // World
@@ -121,15 +127,22 @@ int main() {
     vec3 vup(0,1,0);
     auto dist_to_focus = 10.0;
     auto aperture = 0.1;
-    camera cam(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);
+    camera cam(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus, 0.0, 1.0);
 
-    for (int tick = 0; tick < 10; tick++) {
+    for (int tick = 0; tick < 1; tick++) {
         std::ofstream output_file("images/" + std::to_string(tick) + ".ppm");
         // Render
         output_file << "P3\n" << image_width << " " << image_height << "\n255\n";
 
+        std::vector<std::vector<std::tuple<int,int,int>>> pixels(
+            std::vector<std::vector<std::tuple<int,int,int>>>(image_height,
+            std::vector<std::tuple<int,int,int>>(image_width))
+        );
+
+        std::cerr << "threads: " << omp_get_max_threads() << std::endl;
+        #pragma omp parallel for
         for (int j = image_height-1; j >= 0; --j) {
-            std::cerr << "\rScanlines remaining: " << j << " " << std::flush;
+            // std::cerr << "\rScanlines remaining: " << j << " " << std::flush;
             for (int i = 0; i < image_width; i++) {
                 color pixel_color(0, 0, 0);
                 for (int s = 0; s < samples_per_pixel; ++s) {
@@ -138,9 +151,15 @@ int main() {
                     ray r = cam.get_ray(u, v);
                     pixel_color += ray_color(r, world, max_depth);
                 }
-                write_color(output_file, pixel_color, samples_per_pixel);
+                pixels[j][i] = write_color(output_file, pixel_color, samples_per_pixel);
             }
         }
-        world.shift_center();
+        for (int j = image_height-1; j >= 0; --j) {
+            for (int i = 0; i < image_width; i++) {
+                auto pixel = pixels[j][i];
+                output_file << std::get<0>(pixel) << " " << std::get<1>(pixel) << " " << std::get<2>(pixel) << "\n";
+            }
+        }
+        // world.shift_center();
     }
 }
